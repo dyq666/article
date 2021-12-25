@@ -8,7 +8,7 @@
 ### 代码
 
 ```tsx
-const useMount = (callback: EffectCallback) => useEffect(callback, []);
+const useMount = (callback: () => void) => useEffect(callback, []);
 
 const App = () => {
   const [names, setNames] = useState([]);
@@ -24,7 +24,7 @@ const App = () => {
 
 ### eslint 提示
 
-- eslint:react-hooks/exhaustive-deps 提示我们应该将 `callback` 放到依赖数组中。
+- eslint:react-hooks/exhaustive-deps 提示我们应该将 `callback` 放到依赖数组中。
 
 > React Hook useEffect has a missing dependency: 'callback'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
@@ -32,9 +32,9 @@ const App = () => {
 
 - 修改后，在 Console 中能看到程序死循环了
 
-```tsx
+```ts
 // 其他代码不变
-const useMount = (callback: EffectCallback) => useEffect(callback, [callback]);
+const useMount = (callback: () => void) => useEffect(callback, [callback]);
 ```
 
 ## 死循环的原因
@@ -63,7 +63,7 @@ const App = () => {
 
 - 每次渲染生成的 `callback` 的引用不同，导致每次 `useEffect()` 的依赖数组 `[callback]` 不同。
 - `callback()` 每次将 `names` 修改为 `[]`，每次 `[]` 的引用不同。
-- 每次 `names` 不同会触发重渲染，重渲染时 `[callback]` 不同会触发修改 `names`。
+- 每次 `names` 不同会触发重渲染，重渲染时 `[callback]` 不同会触发修改 `names`。
 
 ## 解决办法 1 - 使用 useCallback()
 
@@ -90,10 +90,10 @@ const App = () => {
 ### 没办法在 useMount() 中使用 useCallback()
 
 - 因为在 `useCallback()` 中用了变量 `callback`，所以 eslint 希望你把 `callback` 放到 `useCallback()` 的依赖数组中。
-- 这个问题实际上和最初把 `callback` 放到 `useEffect()` 的依赖数组中一样，都会触发死循环。
+- 这个问题实际上和最初把 `callback` 放到 `useEffect()` 的依赖数组中一样，都会触发死循环。
 
-```tsx
-const useMount = (callback: EffectCallback) => {
+```ts
+const useMount = (callback: () => void) => {
   // eslint: React Hook useCallback has a missing dependency: 'callback'.
   // Either include it or remove the dependency array  react-hooks/exhaustive-deps
   const memorizedCallback = useCallback(callback, [])
@@ -106,7 +106,7 @@ const useMount = (callback: EffectCallback) => {
 - 缺点是，对于使用者来说有些麻烦
 
 ```tsx
-const useMount = (callback: EffectCallback) => {
+const useMount = (callback: () => void) => {
   useEffect(callback, [callback]);
 };
 
@@ -126,7 +126,16 @@ const App = () => {
 
 ## 解决办法 2 - 屏蔽 eslint
 
-```tsx
+```ts
 // eslint-disable-next-line react-hooks/exhaustive-deps
-const useMount = (callback: EffectCallback) => useEffect(callback, []);
+const useMount = (callback: () => void) => useEffect(callback, []);
+```
+
+## useUnmount()
+
+- 同理可以写个类似的，在组件 unmount 时执行的 effect
+
+```ts
+// eslint-disable-next-line react-hooks/exhaustive-deps
+const useUnmount = (callback: () => void) => useEffect(() => callback, []);
 ```
